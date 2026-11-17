@@ -13,7 +13,7 @@
  *       ->run();                        // 阻塞到窗口关闭（teb 同款主线程 drain）
  *   $win->destroy();                    // 幂等；对象释放时 native_dtor 兜底
  *
- * 线程模型（teb drain 模式；win32 引擎 setter/COM 不线程安全）：
+ * 线程模型（teb drain 模式；各平台 webview setter 均须 UI 线程调用）：
  *   - UI 线程（uv_thread）：webview_create → webview_run(消息泵) → webview_destroy。
  *     所有 webview 操作（setter/navigate/bind/terminate）经 webview_dispatch
  *     投递到该线程执行（dispatch=PostMessage，泵未启动时排队、run 后处理）。
@@ -404,8 +404,9 @@ static TVal nm_window_construct(VM *vm, void *self, TVal *args, int n) {
     if (!ok) {
         st_teardown(st);
         RAISE(vm, "RuntimeException",
-              "%s: webview_create failed (Windows: is WebView2 Runtime "
-              "installed? see README.md)", WHO_CTOR);
+              "%s: webview_create failed (Windows: WebView2 Runtime? "
+              "Linux: WebKitGTK/GTK? macOS: WebKit framework? see README.md)",
+              WHO_CTOR);
     }
     int s = tphp_class_find_prop(o->cls, "w");
     o->props[s] = TV_INT((int64_t)(intptr_t)st);
@@ -641,8 +642,7 @@ static void window_native_dtor(TObj *o) {
     }
 }
 
-#ifdef _WIN32
-/* show/hide：PebView window_*（HWND 直调，跨线程安全）；
+/* show/hide：PebView window_*（三平台均实现：HWND / GtkWidget / NSWindow）；
  * get_window 读 m_window（create 时定死）——closing 后不再取。 */
 static TVal nm_show(VM *vm, void *self, TVal *args, int n) {
     (void)args;
@@ -675,7 +675,6 @@ static TVal nm_hide(VM *vm, void *self, TVal *args, int n) {
     window_hide(hwnd);
     return fluent(o);
 }
-#endif
 
 /* ---- 类构建（tui_util 同款 helpers，包内自包含） ---- */
 
@@ -740,10 +739,8 @@ static void tv_register_window_class(void) {
     tv_cls_add_native(cls, "setTransparent", (void *)nm_set_transparent, false);
     tv_cls_add_native(cls, "run", (void *)nm_run, false);
     tv_cls_add_native(cls, "destroy", (void *)nm_destroy, false);
-#ifdef _WIN32
     tv_cls_add_native(cls, "show", (void *)nm_show, false);
     tv_cls_add_native(cls, "hide", (void *)nm_hide, false);
-#endif
     cls->native_dtor = window_native_dtor;
     tphp_class_register_compile(cls);
 }
@@ -751,7 +748,7 @@ static void tv_register_window_class(void) {
 /* ---- init：ext registry 在首脚本编译前调用一次 ----
  * 命名约定（PLAN/ext-packages.md §2.3）：tphp/tebview → tphp_ext_tphp_tebview_init */
 void tphp_ext_tphp_tebview_init(void) {
-    tphp_ext_reg_const_str("Tphp\\Tebview\\VERSION", "0.0.1");
+    tphp_ext_reg_const_str("Tphp\\Tebview\\VERSION", "0.0.2");
     tphp_ext_reg_const_int("Tphp\\Tebview\\SIZE_HINT_NONE", 0);
     tphp_ext_reg_const_int("Tphp\\Tebview\\SIZE_HINT_MIN", 1);
     tphp_ext_reg_const_int("Tphp\\Tebview\\SIZE_HINT_MAX", 2);

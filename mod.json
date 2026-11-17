@@ -1,9 +1,9 @@
 {
   "name": "tphp/tebview",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "ext",
   "license": "MIT",
-  "description": "PebView/webview 原生窗口扩展（Windows WebView2）。C 扩展面走 ext 正常编译；C++ webview 库由 scripts(postInstall/postUpdate) 编译为 build/webview.o，经 ldflags 的 $PKG 前缀参与本次链接。",
+  "description": "PebView/webview 原生窗口扩展（Windows WebView2 / Linux WebKitGTK / macOS Cocoa）。C 扩展面 src/*.c 走 ext 正常编译；平台相关 TU（C++ webview + gtk/cocoa 原生源）由 scripts(postInstall/postUpdate) 编成 build/*.o，经 ldflags 的 $PKG 前缀链入。",
   "ext": {
     "sources": ["src"],
     "include": ["include", "webview"],
@@ -13,6 +13,16 @@
         "cc": "clang",
         "libs": ["-ldwmapi", "-lcomdlg32", "-lgdi32", "-lshlwapi", "-lversion", "-lc++", "-lunwind"],
         "ldflags": ["$PKG/build/webview.o"]
+      },
+      "linux": {
+        "cc": "clang",
+        "libs": ["-lwebkit2gtk-4.1", "-ljavascriptcoregtk-4.1", "-lgtk-3", "-lgdk-3", "-lgobject-2.0", "-lglib-2.0", "-lpthread", "-ldl", "-lstdc++"],
+        "ldflags": ["-L", "$PKG/build", "$PKG/build/webview.o", "$PKG/build/window_gtk.o", "$PKG/build/osdialog_gtk.o", "$PKG/build/osdialog.o", "$PKG/build/icon.o"]
+      },
+      "darwin": {
+        "cc": "clang",
+        "libs": ["-lc++"],
+        "ldflags": ["-framework", "WebKit", "-framework", "Cocoa", "-framework", "Carbon", "-framework", "Foundation", "-framework", "AppKit", "$PKG/build/webview.o", "$PKG/build/window_mac.o", "$PKG/build/osdialog_mac.o", "$PKG/build/osdialog.o", "$PKG/build/icon.o"]
       }
     },
     "tphp_abi": "0.0.2",
