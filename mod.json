@@ -1,11 +1,25 @@
 {
   "name": "tphp/tebview",
   "version": "0.0.1",
-  "type": "lib",
+  "type": "ext",
   "license": "MIT",
-  "autoload": {
-    "psr-4": {
-      "Tphp\\Tebview\\": "src/"
-    }
+  "description": "PebView/webview 原生窗口扩展（Windows WebView2）。C 扩展面走 ext 正常编译；C++ webview 库由 scripts(postInstall/postUpdate) 编译为 build/webview.o，经 ldflags 的 $PKG 前缀参与本次链接。",
+  "ext": {
+    "sources": ["src"],
+    "include": ["include", "webview"],
+    "os": {
+      "windows": {
+        "sources": ["source/win32"],
+        "cc": "clang",
+        "libs": ["-ldwmapi", "-lcomdlg32", "-lgdi32", "-lshlwapi", "-lversion", "-lc++", "-lunwind"],
+        "ldflags": ["$PKG/build/webview.o"]
+      }
+    },
+    "tphp_abi": "0.0.2",
+    "init": "tphp_ext_tphp_tebview_init"
+  },
+  "scripts": {
+    "postInstall": "scripts/build-cxx.php",
+    "postUpdate": "scripts/build-cxx.php"
   }
 }

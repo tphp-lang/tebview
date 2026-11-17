@@ -21,6 +21,10 @@
                 console.log(res)
             })
         }
+        // 加载即自动调用一次：无头冒烟可捕获 var_dump 输出（tests/hello.php）
+        php_time("load", 42).then((res) => {
+            console.log("load result:", res)
+        })
     </script>
 </body>
 
